@@ -1,2 +1,2 @@
-# af
-A faster cross_between for unit-chunk selection across a single axis
+# de_rle
+Re-encode SciDB Arrays
