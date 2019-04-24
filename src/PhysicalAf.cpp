@@ -38,14 +38,13 @@
 #include <query/TypeSystem.h>
 #include <query/FunctionDescription.h>
 #include <query/FunctionLibrary.h>
-#include <query/Operator.h>
+#include <query/PhysicalOperator.h>
 #include <query/TypeSystem.h>
 #include <query/FunctionLibrary.h>
-#include <query/Operator.h>
 #include <array/Tile.h>
 #include <array/TileIteratorAdaptors.h>
 #include <util/Platform.h>
-#include <util/Network.h>
+#include <network/Network.h>
 #include <array/SinglePassArray.h>
 #include <array/SynchableArray.h>
 #include <array/PinBuffer.h>
@@ -84,9 +83,9 @@ public:
         void operator ++() override;
         bool setPosition(Coordinates const& pos) override;
         void restart() override;
-        ArrayIterator(AfArray& arr, AttributeID attrID, std::shared_ptr<ConstArrayIterator> input);
+        ArrayIterator(AfArray& arr, AttributeDesc& attrID, std::shared_ptr<ConstArrayIterator> input);
 
-    private: 
+    private:
         bool coordinatePresent(int64_t coord);
     };
 
@@ -94,13 +93,13 @@ public:
     virtual DelegateArrayIterator* createArrayIterator(AttributeID id) const;
 };
 
-bool AfArray::ArrayIterator::coordinatePresent(int64_t coord) 
+bool AfArray::ArrayIterator::coordinatePresent(int64_t coord)
 {
-    
+
     return std::binary_search(_array._coords.begin(), _array._coords.end(), coord);
 }
 
-AfArray::ArrayIterator::ArrayIterator(AfArray& arr, AttributeID attrID, std::shared_ptr<ConstArrayIterator> input):
+AfArray::ArrayIterator::ArrayIterator(AfArray& arr, AttributeDesc& attrID, std::shared_ptr<ConstArrayIterator> input):
     DelegateArrayIterator(arr, attrID, input),
     _array(arr)
 {
@@ -110,7 +109,7 @@ AfArray::ArrayIterator::ArrayIterator(AfArray& arr, AttributeID attrID, std::sha
 void AfArray::ArrayIterator::operator ++()
 {
     DelegateArrayIterator::operator ++();
-    while(! DelegateArrayIterator::end()) 
+    while(! DelegateArrayIterator::end())
     {
         if( coordinatePresent(DelegateArrayIterator::getPosition()[0]))
         {
@@ -123,14 +122,14 @@ void AfArray::ArrayIterator::operator ++()
 bool AfArray::ArrayIterator::setPosition(Coordinates const& pos)
 {
     bool set = DelegateArrayIterator::setPosition(pos);
-    if(!set) 
+    if(!set)
     {
         return false;
     }
     if(coordinatePresent(DelegateArrayIterator::getPosition()[0] ))
     {
         return true;
-    } 
+    }
     return false;
 }
 
@@ -144,8 +143,8 @@ void AfArray::ArrayIterator::restart()
 }
 
 AfArray::AfArray(std::shared_ptr<Array> input,
-                 std::shared_ptr<Query>const& query, 
-                 std::vector<int64_t> const& coords): 
+                 std::shared_ptr<Query>const& query,
+                 std::vector<int64_t> const& coords):
     DelegateArray(input->getArrayDesc(), input, true)
 {
     _query = query;
@@ -154,7 +153,10 @@ AfArray::AfArray(std::shared_ptr<Array> input,
 
 DelegateArrayIterator* AfArray::createArrayIterator(AttributeID id) const
 {
-    return new AfArray::ArrayIterator(*(AfArray*)this, id, inputArray->getConstIterator(id));
+    AttributeDesc attrDesc = inputArray->getArrayDesc().getAttributes().findattr(id);
+    return new AfArray::ArrayIterator(*(AfArray*)this,
+                                      attrDesc,
+                                      inputArray->getConstIterator(attrDesc));
 }
 
 class PhysicalAf : public PhysicalOperator
@@ -172,8 +174,8 @@ public:
         shared_ptr<Array>& input = inputArrays[0];
         std::vector<int64_t> coords;
         shared_ptr<Array> idx = inputArrays[1];
-        idx = redistributeToRandomAccess(idx, createDistribution(psReplication), ArrayResPtr(), query, getShared());
-        shared_ptr<ConstArrayIterator> aiter = idx->getConstIterator(0);
+        idx = redistributeToRandomAccess(idx, createDistribution(dtReplication), ArrayResPtr(), query, shared_from_this());
+        shared_ptr<ConstArrayIterator> aiter = idx->getConstIterator(input->getArrayDesc().getAttributes().firstDataAttribute());
         while(! aiter->end())
         {
             shared_ptr<ConstChunkIterator> citer = aiter->getChunk().getConstIterator();
@@ -185,7 +187,7 @@ public:
                   coords.push_back( v.getInt64() );
                 }
                 ++(*citer);
-            } 
+            }
             ++(*aiter);
         }
         std::sort(coords.begin(), coords.end());

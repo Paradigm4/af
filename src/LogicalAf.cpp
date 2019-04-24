@@ -23,7 +23,7 @@
 * END_COPYRIGHT
 */
 
-#include <query/Operator.h>
+#include <query/LogicalOperator.h>
 
 using std::shared_ptr;
 namespace scidb
@@ -35,13 +35,24 @@ public:
     LogicalAf(const std::string& logicalName, const std::string& alias):
         LogicalOperator(logicalName, alias)
     {
-        ADD_PARAM_INPUT();
-	ADD_PARAM_INPUT();
+    }
+
+    static PlistSpec const* makePlistSpec()
+    {
+        static PlistSpec argSpec {
+            { "", // positionals
+              RE(RE::LIST, {
+                 RE(PP(PLACEHOLDER_INPUT)),
+                 RE(PP(PLACEHOLDER_INPUT))
+              })
+            }
+        };
+        return &argSpec;
     }
 
     ArrayDesc inferSchema(std::vector< ArrayDesc> schemas, shared_ptr< Query> query)
     {
-        if(schemas[1].getAttributes()[0].getType() != TID_INT64) 
+        if(schemas[1].getAttributes().firstDataAttribute().getType() != TID_INT64)
         {
           throw SYSTEM_EXCEPTION(SCIDB_SE_INTERNAL, SCIDB_LE_ILLEGAL_OPERATION) << "second array must have an int64 first attribute";
         }
