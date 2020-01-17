@@ -153,10 +153,10 @@ AfArray::AfArray(std::shared_ptr<Array> input,
 
 DelegateArrayIterator* AfArray::createArrayIterator(AttributeID id) const
 {
-    AttributeDesc attrDesc = inputArray->getArrayDesc().getAttributes().findattr(id);
+    AttributeDesc attrDesc = getPipe(0)->getArrayDesc().getAttributes().findattr(id);
     return new AfArray::ArrayIterator(*(AfArray*)this,
                                       attrDesc,
-                                      inputArray->getConstIterator(attrDesc));
+                                      getPipe(0)->getConstIterator(attrDesc));
 }
 
 class PhysicalAf : public PhysicalOperator
