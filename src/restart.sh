@@ -5,15 +5,15 @@ set -e
 
 DBNAME="mydb"
 #This is easily sym-linkable: ~/scidb
-SCIDB_INSTALL="/opt/scidb/18.1"
-export SCIDB_THIRDPARTY_PREFIX="/opt/scidb/18.1"
+SCIDB_INSTALL="/opt/scidb/19.11"
+export SCIDB_THIRDPARTY_PREFIX="/opt/scidb/19.11"
 
 mydir=`dirname $0`
 pushd $mydir
 make SCIDB=$SCIDB_INSTALL
 
-scidb.py stopall $DBNAME 
+scidbctl.py stop $DBNAME
 cp libaf.so ${SCIDB_INSTALL}/lib/scidb/plugins/
-scidb.py startall $DBNAME 
+scidbctl.py start $DBNAME
 
 iquery -aq "load_library('af')"

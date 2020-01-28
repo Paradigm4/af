@@ -83,14 +83,14 @@ public:
         void operator ++() override;
         bool setPosition(Coordinates const& pos) override;
         void restart() override;
-        ArrayIterator(AfArray& arr, AttributeDesc& attrID, std::shared_ptr<ConstArrayIterator> input);
+        ArrayIterator(AfArray& arr, const AttributeDesc& attrID, std::shared_ptr<ConstArrayIterator> input);
 
     private:
         bool coordinatePresent(int64_t coord);
     };
 
     AfArray(std::shared_ptr<Array> input, std::shared_ptr<Query>const& query, std::vector<int64_t> const& coords);
-    virtual DelegateArrayIterator* createArrayIterator(AttributeID id) const;
+    DelegateArrayIterator* createArrayIterator(const AttributeDesc& id) const override;
 };
 
 bool AfArray::ArrayIterator::coordinatePresent(int64_t coord)
@@ -99,7 +99,7 @@ bool AfArray::ArrayIterator::coordinatePresent(int64_t coord)
     return std::binary_search(_array._coords.begin(), _array._coords.end(), coord);
 }
 
-AfArray::ArrayIterator::ArrayIterator(AfArray& arr, AttributeDesc& attrID, std::shared_ptr<ConstArrayIterator> input):
+AfArray::ArrayIterator::ArrayIterator(AfArray& arr, const AttributeDesc& attrID, std::shared_ptr<ConstArrayIterator> input):
     DelegateArrayIterator(arr, attrID, input),
     _array(arr)
 {
@@ -151,9 +151,8 @@ AfArray::AfArray(std::shared_ptr<Array> input,
     _coords = coords;
 }
 
-DelegateArrayIterator* AfArray::createArrayIterator(AttributeID id) const
+DelegateArrayIterator* AfArray::createArrayIterator(const AttributeDesc& attrDesc) const
 {
-    AttributeDesc attrDesc = getPipe(0)->getArrayDesc().getAttributes().findattr(id);
     return new AfArray::ArrayIterator(*(AfArray*)this,
                                       attrDesc,
                                       getPipe(0)->getConstIterator(attrDesc));
